@@ -263,6 +263,8 @@ void dijkstra(Graph G, int source, int weight[]) {
                 }
         }
     }
+
+    free(priorityQueue);
 }
 
 /*******************************************************************************
@@ -310,6 +312,8 @@ void bellmanFord(Graph G, int source, int weight[]) {
             }
         }
     }
+
+    free(queue);
 }
 
 
@@ -317,7 +321,7 @@ void bellmanFord(Graph G, int source, int weight[]) {
 *                                Johnson                                       *
 *******************************************************************************/
 
-void johnson(Graph G, Graph auxiliar, int** weightMatrix, int* branchID) {
+void johnson(Graph G, int** weightMatrix, int* branchID) {
 
     int vertex, i, source, j;
     int q0 = G->V; /* Criar vértice q0*/
@@ -327,10 +331,13 @@ void johnson(Graph G, Graph auxiliar, int** weightMatrix, int* branchID) {
     	os edges, ou arranjar maneira de inicializar o grafo auxiliar aqui */
     for (vertex = 0; vertex < G->V; vertex++) {
         Edge edge = newEDGE(q0, vertex, 0);
-        GRAPHinsertE(auxiliar, edge);
+        GRAPHinsertE(G, edge);
     }
 
-    bellmanFord(auxiliar, q0, weight);
+
+    G->V++;
+    bellmanFord(G, q0, weight);
+    G->V--;
 
     for (i = 0; i < G->V; i++) {
         for (adjVertex = G->adj[i]; adjVertex != NULL; adjVertex = adjVertex->next) {
@@ -365,8 +372,8 @@ int main() {
 
     scanf("%d %d %d", &vertices, &b, &e);
 
-    Graph network = GRAPHinit(vertices);
-    Graph auxiliar = GRAPHinit(vertices+1);
+    Graph graph = GRAPHinit(vertices+1);
+    graph -> V--;
     
     branchID = malloc((b+1)*sizeof(int));
 
@@ -379,8 +386,7 @@ int main() {
     for (; e>0; e--) {
         scanf("%d %d %d", &u, &v, &wt);
         Edge edge = newEDGE(u-1, v-1, wt);
-        GRAPHinsertE(network, edge);
-        GRAPHinsertE(auxiliar, edge);
+        GRAPHinsertE(graph, edge);
     }
 
     weightMatrix = malloc(b * sizeof(int*));
@@ -395,7 +401,7 @@ int main() {
             weightMatrix[i][j] = 0;
     }
 
-    johnson(network, auxiliar, weightMatrix, branchID);
+    johnson(graph, weightMatrix, branchID);
 
 
     for(i = 0; i < vertices; i++) {
@@ -416,6 +422,11 @@ int main() {
     }
 
     if (lowestCost == INT_MAX) {
+        free(branchID);
+        for(i = 0; i < b; i++) {
+            free(weightMatrix[i]);
+        }
+        free(weightMatrix);
         printf("N\n");
         return 0;
     }
@@ -426,5 +437,12 @@ int main() {
         printf("%d ", weightMatrix[i][loc-1]);
     }
     printf("\n");
+
+    free(branchID);
+    for(i = 0; i < b; i++) {
+        free(weightMatrix[i]);
+    }
+    free(weightMatrix);
+
     return 0;
 }
