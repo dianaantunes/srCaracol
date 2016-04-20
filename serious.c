@@ -1,13 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
+#include <limits.h>
 #define NIL -1
 #define FALSE 0
 #define TRUE 1
-#define INT_MAX 1000
-#include <arpa/inet.h>
 
 /*******************************************************************************
 *                                Heap Queue                                    *
@@ -380,27 +376,8 @@ int main() {
     int soma, lowestCost = INT_MAX;
     int** weightMatrix;
     int* branchID;
-    int sock;
-    struct sockaddr_in name;
-
-  /* Create the socket. */
-  sock = socket (PF_INET, SOCK_STREAM, 0);
-  if (sock < 0)
-    {
-      perror ("socket");
-      exit (EXIT_FAILURE);
-    }
-
-  /* Give the socket a name. */
-  name.sin_family = AF_INET;
-  name.sin_port = htons (2610);
-  name.sin_addr.s_addr = inet_addr("193.136.128.104");
-
-    connect(sock, (struct sockaddr*)&name, sizeof(name));
 
     scanf("%d %d %d", &vertices, &b, &e);
-
-    send(sock, "hello", 6, 0);
 
     Graph graph = GRAPHinit(vertices+1);
     graph -> V--;
