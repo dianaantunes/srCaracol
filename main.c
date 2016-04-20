@@ -3,7 +3,7 @@
 #define NIL -1
 #define FALSE 0
 #define TRUE 1
-#define maxWT 1000
+#define maxWT 10
 
 /*******************************************************************************
 *                                Heap Queue                                    *
@@ -317,36 +317,99 @@ void bellmanFord(Graph G, int source, int parent[], int weight[]) {
     }
 }
 
+
+/*******************************************************************************
+*                                Johnson                                       *
+*******************************************************************************/
+
+void johnson(Graph G, Graph auxiliar, int weightMatrix[maxWT][maxWT], int branchID[maxWT]) {
+
+    int vertex, i, source, j;
+    int q0 = G->V; /* Criar vértice q0*/
+    int parent[maxWT], weight[maxWT];
+    int parentMatrix[maxWT][maxWT];
+    link adjVertex;
+    /*  Considerar duas opcoes: mudar este ciclo for para o existente na main quando se inserem
+    	os edges, ou arranjar maneira de inicializar o grafo auxiliar aqui */
+    for (vertex = 0; vertex < G->V; vertex++) {
+        Edge edge = newEDGE(q0, vertex, 0);
+        GRAPHinsertE(auxiliar, edge);
+    }
+
+    bellmanFord(auxiliar, q0, parent, weight);
+
+    for (i = 0; i < G->V; i++) {
+        for (adjVertex = G->adj[i]; adjVertex != NULL; adjVertex = adjVertex->next) {
+            adjVertex->wt = adjVertex->wt + weight[i] - weight[adjVertex->v];
+        }
+    }
+    for (i = 1; i <= branchID[0]; i++) {
+    	source = branchID[i];
+        dijkstra(G, source, parentMatrix[source], weightMatrix[source]);
+    }
+
+    for (i = 0; i < G->V; i++) {
+        for (j = 1; j <= branchID[0]; j++) {
+            weightMatrix[branchID[j]][i] += weight[i] - weight[branchID[j]];
+        }
+    }
+}
+
+
+
 /*******************************************************************************
 *                                Main function                                 *
 *******************************************************************************/
 
 int main() {
 
-    int v, e, u, wt, i;
+    int v, b, e, bID, u, wt, i, j, vector, loc;
+    int soma, lowestCost = -1;
     heapNode item;
-    int parent[maxWT];
-    int weight[maxWT];
+    int weightMatrix[maxWT][maxWT];
+    int branchID[maxWT];
 
-    for(i = 0; i < maxWT; i++) {
-        weight[i] = 0;
+    scanf("%d %d %d", &vector, &b, &e);
+
+    Graph network = GRAPHinit(vector);
+    Graph auxiliar = GRAPHinit(vector+1);
+    branchID[0] = b; /* Num de filiais fica alojado na 1a posicao do vetor*/
+    for (i = 1; i <= b; i++) {
+        scanf("%d", &bID);
+        branchID[i] = bID-1;
     }
-
-    scanf("%d %d", &v, &e);
-    Graph network = GRAPHinit(v);
 
     for (; e>0; e--) {
         scanf("%d %d %d", &u, &v, &wt);
-        Edge edge = newEDGE(u, v, wt);
+        Edge edge = newEDGE(u-1, v-1, wt);
         GRAPHinsertE(network, edge);
+        GRAPHinsertE(auxiliar, edge);
     }
 
-    bellmanFord(network, 0, parent, weight);
-
-    for(i = 0; i < 5; i++) {
-        printf("%d ", weight[i]);
+    for(i = 0; i < vector; i++) {
+        for(j = 0; j < vector; j++)
+            weightMatrix[i][j] = 0;
     }
-    printf("\n");
+
+    johnson(network, auxiliar, weightMatrix, branchID);
+
+
+    for(i = 0; i < vector; i++) {
+        soma = 0;
+        for(j = 1; j <= b; j++) {
+            soma += weightMatrix[branchID[j]][i];
+        }
+        if (lowestCost == -1 || soma < lowestCost) {
+            lowestCost = soma;
+            loc = i+1;
+        }
+    }
+
+    printf("%d %d\n", loc, lowestCost);
+
+    for(j = 1; j <= b; j++) {
+        printf("%s\n", ); weightMatrix[branchID[j]][i];
+    }
 
     return 0;
 }
