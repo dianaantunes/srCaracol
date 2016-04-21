@@ -401,12 +401,14 @@ int main() {
         GRAPHinsertE(graph, edge);
     }
 
-    for(i = 0; i < graph -> V; i++) {
-        for(j = 1; j <= b; j++) {
-            if (graph -> adj[branchID[j]] == NULL) {
-                printf("N\n");
-                return 0;
-            }
+    for(i = 1; i <= b; i++) {
+        j = 0;
+        if (graph -> adj[branchID[i]] == NULL) {
+            j++;
+        }
+        if (j>1) {
+            printf("N\n");
+            return 0;
         }
     }
 
