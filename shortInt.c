@@ -14,7 +14,7 @@
 and it's predicted distance to the source (acording to Dijkstra)*/
 typedef struct {
     int key;
-    int weight;
+    short int weight;
 } heapNode;
 
 /* We store the number of elements as a global variable for convenience */
@@ -42,6 +42,7 @@ void fixUp(int index, heapNode *priorityQueue) {
         priorityQueue[index/2] = temp;
         index = index/2;
     }
+
 }
 
 /* This function is Corman's equivalent to Min-Heapify.
@@ -76,8 +77,10 @@ int PQempty() {
 
 /* This function inserts an element in que heap and puts it in his final position */
 void PQinsert(heapNode v, heapNode *priorityQueue) {
+
     priorityQueue[++numberOfElements] = v;
     fixUp(numberOfElements, priorityQueue);
+
 }
 
 /* This function returns and removes the first (minimum) element of the heap,
@@ -97,7 +100,7 @@ heapNode PQdelmin(heapNode *priorityQueue) {
 
 /* This function changes the weight of a given key, and rearanges the node in
 the heap */
-void PQchange(int key, int newWeight, heapNode *priorityQueue) {
+void PQchange(int key, short int newWeight, heapNode *priorityQueue) {
 
     int i;
 
@@ -105,6 +108,7 @@ void PQchange(int key, int newWeight, heapNode *priorityQueue) {
         if(priorityQueue[i].key == key) {
             priorityQueue[i].weight = newWeight;
             fixUp(i, priorityQueue);
+            return;
         }
     }
 }
@@ -267,7 +271,7 @@ void dijkstra(Graph G, int source, short int weight[]) {
             for (t = G->adj[vertex]; t != NULL; t = t->next)
                 if (weight[vertex] + t->wt < weight[adjVertex = t->v]) {
                     weight[adjVertex] = weight[vertex] + t->wt;
-                    PQchange(adjVertex,weight[adjVertex], priorityQueue);
+                    PQchange(adjVertex, weight[adjVertex], priorityQueue);
                 }
         }
     }
