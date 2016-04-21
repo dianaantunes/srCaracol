@@ -1,13 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
+#include <limits.h>
+
 #define NIL -1
 #define FALSE 0
 #define TRUE 1
-#define INT_MAX 1000
-#include <arpa/inet.h>
 
 /*******************************************************************************
 *                                Heap Queue                                    *
@@ -20,21 +17,22 @@ typedef struct {
     int weight;
 } heapNode;
 
-/* We store the priorityQueue as a global variable for convenience*/
-static heapNode *priorityQueue;
-
 /* We store the number of elements as a global variable for convenience */
 static int numberOfElements;
 
 /* This function initializes the priorityQueue for maxN elements,
 with 0 elements */
-void PQinit(int maxN) {
+heapNode* PQinit(int maxN) {
+
+    heapNode *priorityQueue;
     priorityQueue = malloc((maxN+1)*sizeof(heapNode));
     numberOfElements = 0;
+
+    return priorityQueue;
 }
 
 /* It receives an index of the heap and pushes it up to it's final position */
-void fixUp(int index) {
+void fixUp(int index, heapNode *priorityQueue) {
 
     heapNode temp;
 
@@ -49,7 +47,7 @@ void fixUp(int index) {
 /* This function is Corman's equivalent to Min-Heapify.
 It receives an index of the heap and builds a min heap, assuming it's children
 are already a min heap */
-void fixDown(int index) {
+void fixDown(int index, heapNode *priorityQueue) {
 
     int j;
     heapNode temp;
@@ -77,14 +75,14 @@ int PQempty() {
 }
 
 /* This function inserts an element in que heap and puts it in his final position */
-void PQinsert(heapNode v) {
+void PQinsert(heapNode v, heapNode *priorityQueue) {
     priorityQueue[++numberOfElements] = v;
-    fixUp(numberOfElements);
+    fixUp(numberOfElements, priorityQueue);
 }
 
 /* This function returns and removes the first (minimum) element of the heap,
 and rearanges it*/
-heapNode PQdelmin() {
+heapNode PQdelmin(heapNode *priorityQueue) {
 
     heapNode min = priorityQueue[1];
 
@@ -92,21 +90,21 @@ heapNode PQdelmin() {
     priorityQueue[numberOfElements] = min;
 
     numberOfElements--;
-    fixDown(1);
+    fixDown(1, priorityQueue);
 
     return min;
 }
 
 /* This function changes the weight of a given key, and rearanges the node in
 the heap */
-void PQchange(int key, int newWeight) {
+void PQchange(int key, int newWeight, heapNode *priorityQueue) {
 
     int i;
 
-    for(i = 0; i< numberOfElements; i++) {
+    for(i = 1; i <= numberOfElements; i++) {
         if(priorityQueue[i].key == key) {
             priorityQueue[i].weight = newWeight;
-            fixUp(i);
+            fixUp(i, priorityQueue);
         }
     }
 }
@@ -231,40 +229,59 @@ void GRAPHshow(Graph G) {
 the source (vertex from where the distances are calculated), a vector containing
 the parent of each vertex, and a vector to fill with the distance to the source of
 each vertex */
-void dijkstra(Graph G, int source, int weight[]) {
+void dijkstra(Graph G, int source) {
 
     int vertex, adjVertex;
+    int weight[G->V];
     heapNode item;
     link t;
+    heapNode *priorityQueue;
+    Edge edge;
 
     /* We initialize the priority queue for the vertices*/
-    PQinit(G->V);
+    priorityQueue = PQinit(G->V);
 
     /* Then we initialize the vectors and the heap: every vertex has no parent and it's
     distance to the source is infinite */
     for (vertex = 0; vertex < G->V; vertex++) {
-        weight[vertex] = INT_MAX;
-        item.weight = INT_MAX;
-        item.key = vertex;
-        PQinsert(item);
+        if(vertex == source) {
+            weight[vertex] = 0;
+            item.weight = 0;
+            item.key = vertex;
+            PQinsert(item, priorityQueue);
+        }
+        else {
+            weight[vertex] = INT_MAX;
+            item.weight = INT_MAX;
+            item.key = vertex;
+            PQinsert(item, priorityQueue);
+        }
     }
-
-    /* The source has the 0 weight and it's value on the heap is updated*/
-    weight[source] = 0;
-    PQchange(source,0);
 
     /* We then proceed to run the algorithm as usual */
     while (!PQempty()) {
 
-        item = PQdelmin();
+        item = PQdelmin(priorityQueue);
         vertex = item.key;
 
         if (weight[vertex] != INT_MAX) {
             for (t = G->adj[vertex]; t != NULL; t = t->next)
                 if (weight[vertex] + t->wt < weight[adjVertex = t->v]) {
                     weight[adjVertex] = weight[vertex] + t->wt;
-                    PQchange(adjVertex,weight[adjVertex]);
+                    PQchange(adjVertex,weight[adjVertex], priorityQueue);
                 }
+        }
+    }
+
+    for (t = G->adj[source]; t != NULL; t = t->next) {
+        t -> wt = weight[t->v];
+        weight[t->v] = INT_MAX;
+    }
+
+    for (vertex = 0; vertex < G->V; vertex++) {
+        if (weight[vertex] != INT_MAX && vertex != source) {
+            edge = newEDGE(source, vertex, weight[vertex]);
+            GRAPHinsertE(G, edge);
         }
     }
 
@@ -303,8 +320,10 @@ void bellmanFord(Graph G, int source, int weight[]) {
     while (!QUEUEempty()) {
 
         if ((vertex = QUEUEget()) == G->V) {
-            if (N++ > G->V)
+            if (N++ > G->V) {
+                free(queue);
                 return;
+            }
             QUEUEput(G->V);
         }
         else {
@@ -317,7 +336,6 @@ void bellmanFord(Graph G, int source, int weight[]) {
         }
     }
 
-    free(queue);
 }
 
 
@@ -325,9 +343,9 @@ void bellmanFord(Graph G, int source, int weight[]) {
 *                                Johnson                                       *
 *******************************************************************************/
 
-void johnson(Graph G, int** weightMatrix, int* branchID) {
+void johnson(Graph G, int* branchID) {
 
-    int vertex, i, source, j;
+    int vertex, i, source;
     int q0 = G->V; /* Criar vértice q0*/
     int weight[G->V];
     link adjVertex;
@@ -340,7 +358,9 @@ void johnson(Graph G, int** weightMatrix, int* branchID) {
 
 
     G->V++;
+
     bellmanFord(G, q0, weight);
+
     G->V--;
 
     for (i = 0; i < G->V; i++) {
@@ -348,27 +368,21 @@ void johnson(Graph G, int** weightMatrix, int* branchID) {
             adjVertex->wt = adjVertex->wt + weight[i] - weight[adjVertex->v];
         }
     }
+
     for (i = 0; i < branchID[0]; i++) {
     	source = branchID[i+1];
-        dijkstra(G, source, weightMatrix[i]);
+        dijkstra(G, source);
     }
 
     for (i = 0; i < G->V; i++) {
-        for (j = 0; j < branchID[0]; j++) {
-            if (weightMatrix[j][i] != INT_MAX)
-                weightMatrix[j][i] += weight[i] - weight[branchID[j+1]];
+        for (adjVertex = G->adj[i]; adjVertex != NULL; adjVertex = adjVertex->next) {
+            adjVertex->wt += weight[adjVertex->v] - weight[i];
         }
     }
 
-    /* for (i = 0; i < branchID[0]; i++) {
-    	for (j = 0; j < G->V; j++) {
-            printf("%10d ", weightMatrix[i][j]);
-        }
-        printf("\n");
-    } */
+    GRAPHshow(G);
+
 }
-
-
 
 /*******************************************************************************
 *                                Main function                                 *
@@ -378,29 +392,9 @@ int main() {
 
     int v, b, e, bID, u, wt, i, j, vertices, loc, flag;
     int soma, lowestCost = INT_MAX;
-    int** weightMatrix;
     int* branchID;
-    int sock;
-    struct sockaddr_in name;
-
-  /* Create the socket. */
-  sock = socket (PF_INET, SOCK_STREAM, 0);
-  if (sock < 0)
-    {
-      perror ("socket");
-      exit (EXIT_FAILURE);
-    }
-
-  /* Give the socket a name. */
-  name.sin_family = AF_INET;
-  name.sin_port = htons (2610);
-  name.sin_addr.s_addr = inet_addr("193.136.128.104");
-
-    connect(sock, (struct sockaddr*)&name, sizeof(name));
 
     scanf("%d %d %d", &vertices, &b, &e);
-
-    send(sock, "hello", 6, 0);
 
     Graph graph = GRAPHinit(vertices+1);
     graph -> V--;
@@ -419,36 +413,36 @@ int main() {
         GRAPHinsertE(graph, edge);
     }
 
-    weightMatrix = malloc(b * sizeof(int*));
+    johnson(graph, branchID);
 
-    for(i = 0; i < b; i++) {
-        weightMatrix[i] = malloc(vertices * sizeof(int));
+    for (i = 1; i <= b; i++) {
+
+        for (adjVertex = G->adj[branchID[i]]; adjVertex != NULL; adjVertex = adjVertex->next) {
+            printf(" %2d(%d)", adjVertex -> v, adjVertex -> wt);
+        }
+        printf("\n");
+        
     }
 
 
-    for(i = 0; i < b; i++) {
-        for(j = 0; j < vertices; j++)
-            weightMatrix[i][j] = 0;
-    }
 
-    johnson(graph, weightMatrix, branchID);
 
 
     for(i = 0; i < vertices; i++) {
 
         soma = 0;
-        flag = FALSE;
-
         for(j = 0; j < b; j++) {
-            if (weightMatrix[j][i] != INT_MAX)
+            if ()
                 soma += weightMatrix[j][i];
-            else
+            else {
                 flag = TRUE;
+                break;
+            }
         }
-        if (soma < lowestCost && flag == FALSE) {
-            lowestCost = soma;
-            loc = i+1;
-        }
+    if (soma < lowestCost && flag == FALSE) {
+        lowestCost = soma;
+        loc = i+1;
+    }
     }
 
     if (lowestCost == INT_MAX) {
@@ -468,11 +462,6 @@ int main() {
     }
     printf("\n");
 
-    free(branchID);
-    for(i = 0; i < b; i++) {
-        free(weightMatrix[i]);
-    }
-    free(weightMatrix);
 
     return 0;
 }
