@@ -229,12 +229,14 @@ void GRAPHshow(Graph G) {
 the source (vertex from where the distances are calculated), a vector containing
 the parent of each vertex, and a vector to fill with the distance to the source of
 each vertex */
-void dijkstra(Graph G, int source, int weight[]) {
+void dijkstra(Graph G, int source) {
 
     int vertex, adjVertex;
+    int weight[G->V];
     heapNode item;
     link t;
     heapNode *priorityQueue;
+    Edge edge;
 
     /* We initialize the priority queue for the vertices*/
     priorityQueue = PQinit(G->V);
@@ -268,6 +270,18 @@ void dijkstra(Graph G, int source, int weight[]) {
                     weight[adjVertex] = weight[vertex] + t->wt;
                     PQchange(adjVertex,weight[adjVertex], priorityQueue);
                 }
+        }
+    }
+
+    for (t = G->adj[source]; t != NULL; t = t->next) {
+        t -> wt = weight[t->v];
+        weight[t->v] = INT_MAX;
+    }
+
+    for (vertex = 0; vertex < G->V; vertex++) {
+        if (weight[vertex] != INT_MAX && vertex != source) {
+            edge = newEDGE(source, vertex, weight[vertex]);
+            GRAPHinsertE(G, edge);
         }
     }
 
@@ -329,9 +343,9 @@ void bellmanFord(Graph G, int source, int weight[]) {
 *                                Johnson                                       *
 *******************************************************************************/
 
-void johnson(Graph G, int** weightMatrix, int* branchID) {
+void johnson(Graph G, int* branchID) {
 
-    int vertex, i, source, j;
+    int vertex, i, source;
     int q0 = G->V; /* Criar vértice q0*/
     int weight[G->V];
     link adjVertex;
@@ -354,17 +368,19 @@ void johnson(Graph G, int** weightMatrix, int* branchID) {
             adjVertex->wt = adjVertex->wt + weight[i] - weight[adjVertex->v];
         }
     }
+
     for (i = 0; i < branchID[0]; i++) {
     	source = branchID[i+1];
-        dijkstra(G, source, weightMatrix[i]);
+        dijkstra(G, source);
     }
 
     for (i = 0; i < G->V; i++) {
-        for (j = 0; j < branchID[0]; j++) {
-            if (weightMatrix[j][i] != INT_MAX)
-                weightMatrix[j][i] += weight[i] - weight[branchID[j+1]];
+        for (adjVertex = G->adj[i]; adjVertex != NULL; adjVertex = adjVertex->next) {
+            adjVertex->wt += weight[adjVertex->v] - weight[i];
         }
     }
+
+    GRAPHshow(G);
 
 }
 
@@ -376,7 +392,6 @@ int main() {
 
     int v, b, e, bID, u, wt, i, j, vertices, loc, flag;
     int soma, lowestCost = INT_MAX;
-    int** weightMatrix;
     int* branchID;
 
     scanf("%d %d %d", &vertices, &b, &e);
@@ -398,62 +413,8 @@ int main() {
         GRAPHinsertE(graph, edge);
     }
 
-    weightMatrix = malloc(b * sizeof(int*));
+    johnson(graph, branchID);
 
-    for(i = 0; i < b; i++) {
-        weightMatrix[i] = malloc(vertices * sizeof(int));
-    }
-
-
-    for(i = 0; i < b; i++) {
-        for(j = 0; j < vertices; j++)
-            weightMatrix[i][j] = 0;
-    }
-
-    johnson(graph, weightMatrix, branchID);
-
-
-    for(i = 0; i < vertices; i++) {
-
-        soma = 0;
-        flag = FALSE;
-        for(j = 0; j < b; j++) {
-
-            if (weightMatrix[j][i] != INT_MAX)
-                soma += weightMatrix[j][i];
-            else {
-                flag = TRUE;
-                break;
-            }
-        }
-        if (soma < lowestCost && flag == FALSE) {
-            lowestCost = soma;
-            loc = i+1;
-        }
-    }
-
-    if (lowestCost == INT_MAX) {
-        free(branchID);
-        for(i = 0; i < b; i++) {
-            free(weightMatrix[i]);
-        }
-        free(weightMatrix);
-        printf("N\n");
-        return 0;
-    }
-
-    printf("%d %d\n", loc, lowestCost);
-
-    for(i = 0; i < b; i++) {
-        printf("%d ", weightMatrix[i][loc-1]);
-    }
-    printf("\n");
-
-    free(branchID);
-    for(i = 0; i < b; i++) {
-        free(weightMatrix[i]);
-    }
-    free(weightMatrix);
 
     return 0;
 }
