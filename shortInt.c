@@ -401,6 +401,15 @@ int main() {
         GRAPHinsertE(graph, edge);
     }
 
+    for(i = 0; i < graph -> V; i++) {
+        for(j = 1; j <= b; j++) {
+            if (graph -> adj[branchID[j]] == NULL) {
+                printf("N\n");
+                return 0;
+            }
+        }
+    }
+
     weightMatrix = malloc(b * sizeof(short int*));
 
     for(i = 0; i < b; i++) {
@@ -415,21 +424,20 @@ int main() {
 
     johnson(graph, weightMatrix, branchID);
 
-
     for(i = 0; i < vertices; i++) {
 
         soma = 0;
         flag = FALSE;
-        for(j = 0; j < b; j++) {
-
-            if (weightMatrix[j][i] != SHRT_MAX)
-                soma += weightMatrix[j][i];
-            else {
+        for(j = b-1; j >= 0; j--) {
+            if (weightMatrix[j][i] == SHRT_MAX) {
                 flag = TRUE;
                 break;
             }
+            else {
+                soma += weightMatrix[j][i];
+            }
         }
-        if (soma < lowestCost && flag == FALSE) {
+        if (flag == FALSE && soma < lowestCost) {
             lowestCost = soma;
             loc = i+1;
         }
