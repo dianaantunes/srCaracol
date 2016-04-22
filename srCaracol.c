@@ -11,7 +11,7 @@
 *******************************************************************************/
 
 /* Each node of the heap contains the vertex key (an integer),
-and it's predicted distance to the source (acording to Dijkstra)*/
+and it's predicted distance to the source (acording to Dijkstra) */
 typedef struct {
     int key;
     short int weight;
@@ -120,6 +120,8 @@ void PQchange(int key, short int newWeight, heapNode *priorityQueue) {
 static int *queue;
 static int queueSize, head, tail;
 
+/* This function initializes the Queue for maxN elements,
+with 0 elements */
 void QUEUEinit(int maxN) {
     queue = malloc((maxN+1)*sizeof(int));
     queueSize = maxN + 1;
@@ -127,15 +129,18 @@ void QUEUEinit(int maxN) {
     tail = 0;
 }
 
+/* It return a boolean to say if the Queue is empty or not */
 int QUEUEempty() {
     return head % queueSize == tail;
 }
 
+/* This function inserts an element in que Queue */
 void QUEUEput(int item) {
     queue[tail++] = item;
     tail = tail % queueSize;
 }
 
+/* This function removes an element from que Queue */
 int QUEUEget() {
     head = head % queueSize;
     return queue[head++];
@@ -186,7 +191,6 @@ link newLINK(int v, short int wt, link next) {
 /* Initialization of the graph.
 Memory allocation and NULL initialization of V vertices.
 Operation complexity: O(V) */
-
 Graph GRAPHinit(int V) {
     int v;
     Graph G = malloc(sizeof(*G));
@@ -207,24 +211,6 @@ void GRAPHinsertE(Graph G, Edge e) {
     G -> E++;
 }
 
-/* ----- */
-
-void GRAPHshow(Graph G) {
-
-    int i;
-    link adjVertex;
-
-    printf("%d vertices, %d edges\n", G->V, G->E);
-
-    for (i = 0; i < G->V; i++) {
-
-        printf("%2d:", i);
-        for (adjVertex = G->adj[i]; adjVertex != NULL; adjVertex = adjVertex->next) {
-            printf(" %2d(%d)", adjVertex -> v, adjVertex -> wt);
-        }
-        printf("\n");
-    }
-}
 
 /*******************************************************************************
 *                                Dijkstra                                      *
@@ -261,7 +247,7 @@ void dijkstra(Graph G, int source, short int weight[]) {
         }
     }
 
-    /* We then proceed to run the algorithm as usual */
+    /* We then proceed to run the algorithm as usual (Complexity O(VlogV + E)) */
     while (!PQempty()) {
 
         item = PQdelmin(priorityQueue);
@@ -307,7 +293,7 @@ void bellmanFord(Graph G, int source, short int weight[]) {
     QUEUEput(source);
     QUEUEput(G->V);
 
-    /* We then proceed to run the algorithm as usual */
+    /* We then proceed to run the algorithm as usual. Complexity O(VE) */
     while (!QUEUEempty()) {
 
         if ((vertex = QUEUEget()) == G->V) {
@@ -338,33 +324,39 @@ void bellmanFord(Graph G, int source, short int weight[]) {
 void johnson(Graph G, short int** weightMatrix, int* branchID) {
 
     int vertex, i, source, j;
-    int q0 = G->V; /* Criar vértice q0*/
+    int q0 = G->V;
     short int weight[G->V];
     link adjVertex;
-    /*  Considerar duas opcoes: mudar este ciclo for para o existente na main quando se inserem
-    	os edges, ou arranjar maneira de inicializar o grafo auxiliar aqui */
+
+    /*  We create a dummy vertex, and add edges from it to all the other vertices,
+    with weight = 0 */
     for (vertex = 0; vertex < G->V; vertex++) {
         Edge edge = newEDGE(q0, vertex, 0);
         GRAPHinsertE(G, edge);
     }
 
-
+    /* We proceed to run Bellman-Ford with the dummy vertex */
     G->V++;
-
     bellmanFord(G, q0, weight);
-
     G->V--;
 
+    /* The weight vector filled by Bellman-Ford contains the minimum path cost
+    from the dummy vertex to all the other vertices. We use that cost to do
+    Johnsons re-weight. */
     for (i = 0; i < G->V; i++) {
         for (adjVertex = G->adj[i]; adjVertex != NULL; adjVertex = adjVertex->next) {
             adjVertex->wt = adjVertex->wt + weight[i] - weight[adjVertex->v];
         }
     }
+
+    /* We then run Dijkstra algorithm, with the Branches as sources, filling
+    a matrix with all the costs from the Branches to the diferent places */
     for (i = 0; i < branchID[0]; i++) {
     	source = branchID[i+1];
         dijkstra(G, source, weightMatrix[i]);
     }
 
+    /* Then we re-weight the costs to their original value */
     for (i = 0; i < G->V; i++) {
         for (j = 0; j < branchID[0]; j++) {
             if (weightMatrix[j][i] != SHRT_MAX)
@@ -388,12 +380,17 @@ int main() {
 
     scanf("%d %d %d", &vertices, &b, &e);
 
+    /* The graph is initialized with space for one more vertex, for Johnson
+    algorithm create a dummy vertex */
     Graph graph = GRAPHinit(vertices+1);
     graph -> V--;
 
     branchID = malloc((b+1)*sizeof(int));
 
-    branchID[0] = b; /* Num de filiais fica alojado na 1a posicao do vetor*/
+    /* The number of branches is stored in the first position of the vector.
+    This vector is filled with the branches in their input order */
+    branchID[0] = b;
+
     for (i = 1; i <= b; i++) {
         scanf("%d", &bID);
         branchID[i] = bID-1;
@@ -405,37 +402,29 @@ int main() {
         GRAPHinsertE(graph, edge);
     }
 
-    for(i = 1; i <= b; i++) {
-        j = 0;
-        if (graph -> adj[branchID[i]] == NULL) {
-            j++;
-        }
-        if (j>1) {
-            printf("N\n");
-            return 0;
-        }
-    }
-
+    /* The initialization of the matrix to store weights */
     weightMatrix = malloc(b * sizeof(short int*));
-
     for(i = 0; i < b; i++) {
         weightMatrix[i] = malloc(vertices * sizeof(short int));
     }
-
-
     for(i = 0; i < b; i++) {
         for(j = 0; j < vertices; j++)
             weightMatrix[i][j] = 0;
     }
 
+
     johnson(graph, weightMatrix, branchID);
 
+    /* After Johnson algorithm, we proceed to check for the local with the
+    lowest cost to all branches */
     for(i = 0; i < vertices; i++) {
 
+        /* For each local (i), we add it's cost to all the branches */
         soma = 0;
         flag = FALSE;
         for(j = b-1; j >= 0; j--) {
             if (weightMatrix[j][i] == SHRT_MAX) {
+                /* If it's not connected to a branch, it's not a possible answer */
                 flag = TRUE;
                 break;
             }
@@ -443,12 +432,16 @@ int main() {
                 soma += weightMatrix[j][i];
             }
         }
+        /* If it's total cost is lower than the others, we update our predicted
+        meeting local */
         if (flag == FALSE && soma < lowestCost) {
             lowestCost = soma;
             loc = i+1;
         }
     }
 
+    /* If there wasn't any local connected to all branches, than there is
+    no answer to the problem */
     if (lowestCost == SHRT_MAX) {
         free(branchID);
         for(i = 0; i < b; i++) {
@@ -459,6 +452,7 @@ int main() {
         return 0;
     }
 
+    /* Else, we return our elected place and it's cost to the branches */
     printf("%d %d\n", loc, lowestCost);
 
     for(i = 0; i < b; i++) {
